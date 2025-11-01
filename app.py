@@ -336,14 +336,26 @@ detection_method = st.radio("", ["📸 Upload Images", "📹 Webcam"], label_vis
 def load_model():
     try:
         import torch
-        # Allow loading YOLO models by adding safe globals
-        torch.serialization.add_safe_globals(['ultralytics.nn.tasks.DetectionModel'])
+        from ultralytics.nn.tasks import DetectionModel
+        
+        # Add safe globals for PyTorch 2.6+
+        try:
+            torch.serialization.add_safe_globals([DetectionModel])
+        except:
+            pass
+        
+        # Load model with weights_only=False for compatibility
         model = YOLO("road_sign_best.pt")
         return model
     except Exception as e:
         st.error(f"❌ Error loading model: {str(e)}")
         st.info("💡 Make sure 'road_sign_best.pt' is in the same folder as this script")
-        st.info("💡 Try updating ultralytics: pip install --upgrade ultralytics")
+        st.info("💡 Ensure ultralytics is installed: pip install ultralytics")
+        
+        # Show detailed error for debugging
+        import traceback
+        with st.expander("🔍 Show detailed error"):
+            st.code(traceback.format_exc())
         return None
 
 with st.spinner("🔄 Loading Detection System..."):

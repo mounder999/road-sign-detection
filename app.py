@@ -335,11 +335,15 @@ detection_method = st.radio("", ["📸 Upload Images", "📹 Webcam"], label_vis
 @st.cache_resource
 def load_model():
     try:
+        import torch
+        # Allow loading YOLO models by adding safe globals
+        torch.serialization.add_safe_globals(['ultralytics.nn.tasks.DetectionModel'])
         model = YOLO("road_sign_best.pt")
         return model
     except Exception as e:
         st.error(f"❌ Error loading model: {str(e)}")
         st.info("💡 Make sure 'road_sign_best.pt' is in the same folder as this script")
+        st.info("💡 Try updating ultralytics: pip install --upgrade ultralytics")
         return None
 
 with st.spinner("🔄 Loading Detection System..."):
@@ -352,8 +356,8 @@ if model is None:
 with st.expander("🔧 Model Information & Debugging"):
     st.write(f"**Model Classes:** {model.names}")
     st.write(f"**Number of Classes:** {len(model.names)}")
-    confidence_threshold = st.slider("🎯 Adjust Confidence Threshold (for testing)", 0.1, 1.0, 0.5, 0.05)
-    st.info(f"Current threshold: {confidence_threshold*100:.0f}% - Lower this if no detections appear")
+    confidence_threshold = st.slider("🎯 Adjust Confidence Threshold (for testing)", 0.1, 1.0, 0.1, 0.05)
+    st.info(f"Current threshold: {confidence_threshold*100:.0f}% - Lower value shows more detections")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -395,8 +399,11 @@ if detection_method == "📸 Upload Images":
             img_np = np.array(image)
 
             with st.spinner("🔍 Detecting Road Signs..."):
-                results = model.predict(img_np, conf=0.5)
+                results = model.predict(img_np, conf=confidence_threshold)
                 annotated = results[0].plot()
+                
+                # Debug info
+                st.write(f"🔍 **Debug Info:** Found {len(results[0].boxes)} detections with confidence > {confidence_threshold*100:.0f}%")
 
             col_img, col_results = st.columns([3, 2])
             
@@ -475,8 +482,11 @@ else:
         img_np = np.array(img)
         
         with st.spinner("🔍 Analyzing Image for Road Signs..."):
-            results = model.predict(img_np, conf=0.5)
+            results = model.predict(img_np, conf=confidence_threshold)
             annotated = results[0].plot()
+            
+            # Debug info
+            st.write(f"🔍 **Debug Info:** Found {len(results[0].boxes)} detections with confidence > {confidence_threshold*100:.0f}%")
         
         col_img, col_results = st.columns([3, 2])
         
